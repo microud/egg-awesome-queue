@@ -7,7 +7,19 @@ export interface RedisConfig {
   db?: number;
 }
 
-type ProcessHandle = (this: { app: Application, ctx: Context, queue: Queue}, job: Job) => void | Promise<void>
+interface ProcessHandleThis {
+  app: Application;
+  ctx: Context;
+  queue: Queue;
+}
+
+type ProcessHandle = (this: ProcessHandleThis, job: Job, done?: Function) => void | Promise<void>
+
+export interface ProcessDetail {
+  name?: string;
+  concurrency?: number;
+  processor: ProcessHandle;
+}
 
 export interface BullConfig {
   baseDir?: string;
@@ -15,22 +27,27 @@ export interface BullConfig {
 }
 
 export interface MultipleProcess {
-  [key: string]: ProcessHandle;
+  [key: string]: ProcessHandle | ProcessDetail;
 }
 
-type Process = ProcessHandle | MultipleProcess;
+type Process = ProcessHandle | ProcessDetail | MultipleProcess;
+
+type QueueMethod = (this: ProcessHandleThis & { process: { [key: string]: Required<ProcessDetail> } }, ...args) => any;
 
 export interface BullDefinition {
   name?: string;
   options?: QueueOptions;
   process: Process;
-  completed: (Job) => void | Promise<void>;
+  methods?: {
+    [key: string]: QueueMethod;
+  };
+  completed?: (Job, any) => void | Promise<void>;
 }
 
 declare namespace Bull {
   interface Queue {
     [key: string]: {
-      add: (name: string, options?: JobOptions) => Promise<void>;
+      add: (name: string, data: any, options?: JobOptions) => Promise<void>;
     }
   }
 }
@@ -39,6 +56,7 @@ declare module 'egg' {
   interface EggAppConfig {
     bull: BullConfig;
   }
+
   interface Application {
     definition: {
       [key: string]: BullDefinition;

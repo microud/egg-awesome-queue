@@ -1,5 +1,5 @@
 import { Application } from 'egg';
 
 export = (app: Application) => {
-  require('./lib/loader')(app);
+  require('./lib/class_loader')(app);
 }
