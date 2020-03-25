@@ -40,7 +40,7 @@ exports.bull = {
 };
 ```
 
-## Configuration
+## 配置
 
 ```js
 // {app_root}/config/config.default.js
@@ -53,72 +53,75 @@ exports.bull = {
 };
 ```
 
-## Usage
+## 使用
 
-### Queue Definition
+### 队列定义
 
-通过创建多个队列的定义来维护队列
-- name: 队列名称, 为空的话会使用文件名作为队列名
-- process: 供 Bull queue 调用的回调函数，用来处理任务（Job），有两种定义方式
-  - 单个回调定义: 定义名为 `process` 的函数即可，会注册为名称为 `default` 的任务的回调处理方法
-  - 多个回调定义: 定义多个名称的回调处理方法，用于处理不同名称的任务
+每一个队列定义文件中，需要导出一个继承自 `BaseQueue` 的类。
+
+类定义中，`this` 对象为 Bull 队列的实例，并且在类构造的时候已经注入了 Egg Application 的实例 `app`，使得在类方法里可以访问 Egg 的资源。
+
+如果需要访问 Egg Context，则需要通过 `app.createAnonymousContext()` 创建一个匿名的上下文对象，从而访问 `service` 等资源。
+
+类定义中，可以定义任意方法（原型上不存在的 key），通过注解来标识各种类型的回调函数，在插件启动的时候，会自动在队列中进行注册或监听。
+
+#### Process(options?: { name?: string; concurrency?: number })
+
+标识方法为一个 Process，会在插件加载的时候通过 Queue.process(name, concurrency, processor) 进行注册，
+  - name: Queue.process() 方法接受的 name 参数，默认为方法名，通过设置 name 可以自定义名称
+  - concurrency: Queue.process() 方法接受的 concurrency 参数，作用是设置并发数，默认为 1
   
- 在 process 函数内部，绑定了一个包含 Egg 相关对象的 `this`，其中包括：
- - app: Egg Application 对象，和其他地方的 app 对象完全一致
- - ctx: Egg Context 对象，是通过 `app.createAnonymousContext()` 创建的一个匿名 ctx 对象，没有 Request 相关的信息，主要通过它访问 `service`
- - queue: Bull 的队列信息，即调用这个处理程序的队列的对象
- 
-```js
-// single process definition
-module.exports = {
-  name: 'queue name', // optional, default to file name
-  async process(job) {
-    const { app, ctx, queue } = this;
-    await ctx.service.job.process(job);
-  }
-}
+#### Completed()
 
-// or multiple process definition
-module.exports = {
-  name: 'queue name',
-  process: {
-    async default() {
-     // ...
-    },
-    async cron() {
-      // ...
-    }
-  }
-}
-```
+标识一个方法为处理 `Queue.on('completed', () => {})` 的回调函数，在整个队列中唯一。
+
+#### 其他方法
+
+在队列的定义中可以任意定义原型中的 key 以外的方法，可以作为一些可供调用方法的封装，替代部分 service 的方法定义，并在一个队列文件中集中管理。
+
 
 ```ts
-import { BullDefinition } from "egg-bull";
+import { BaseQueue, Process, Completed } from "egg-bull";
 
-// single process definition
-export default {
-  name: 'queue name', // optional, default to file name
-  async process(job) {
-    const { app, ctx, queue } = this;
-    await ctx.service.job.process(job);
-  }
-} as BullDefinition;
+export default class FirstQueue extends BaseQueue {
 
-// or multiple process definition
-export default {
-  name: 'queue name',
-  process: {
-    async default() {
-     // ...
-    },
-    async cron() {
-      // ...
-    }
+  /**
+   * 定义一个设置了 name 和 concurrency 的处理器，在插件启动的时候自动注册
+   */
+  @Process({ name: 'normal-job', concurrency: 2 })
+  async normalJob(job) {
+    console.log(job.data);
   }
-} as BullDefinition;
+  
+  /**
+   * 定义一个默认处理器，在插件启动的时候自动注册，注册名为方法名
+   */
+  @Process()
+  async secondJob(job) {
+    console.log(job.data);
+  }
+  
+  /**
+   * 定义队列中任务完成的回调函数，在插件启动的时候自动注册，方法可接受两个参数，第一个为 Job 对象，第二个为 Process 返回的结果
+   */
+  @Completed()
+  async completed(job, result) {
+    console.log(job, result);
+  }
+  
+  /**
+   * 封装添加任务的方法，甚至可以在里面结合业务。
+   */
+  async addNormoJob(data) {
+    // 添加任务
+    this.add('normal-job', {
+      data,    
+    });
+  }
+
+}
 ```
 
-see [config/config.default.js](config/config.default.js) for more detail.
 
 ### API
 
@@ -129,19 +132,15 @@ see [config/config.default.js](config/config.default.js) for more detail.
 ```ts
 export default class HomeController extend Controller {
   index() {
-    const { app } = this;
+    const { app, ctx } = this;
     // add() 的使用方法与 Bull 文档中定义的完全一致，但是提供了自动分配未知的 name 到默认 process 的能力
-    app.queue.test.add({
-      foo: 'bar',
-    });
+    app.queue.test.addNormalJob(ctx.query);
 
-    // 未定义的任务名称，会自动分配为默认的 process，可以在设置中关闭该特性。
-    app.queue.test.add('non-definition', {
-      foo: 'bar',
-    });
+    // 依旧可以使用 Queue 上的任何方法：
+    app.queue.test.add(ctx.query);
 
-    // [扩展的方法] 直接指定 process 名称并创建任务。其中 process_name 为指定的处理函数，名称必须填写且不在定义表中，否则会影响初始行为。
-    app.queue.test[process_name].add('task name or user defined id', data, options);
+    // 指定 process 进行任务的添加：
+    app.queue.test.process('normal-job').receive(job);
   }
 }
 ```
