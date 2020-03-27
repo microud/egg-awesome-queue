@@ -1,15 +1,14 @@
-import { Application } from 'egg';
 import * as Queue from 'bull';
 import * as path from 'path';
-import { BaseQueue } from './BaseQueue';
+import { BaseQueue } from './base';
 
-export = (app: Application) => {
+export = (app) => {
   app.Bull = Queue;
   // Queue.prototype.add
   loadQueues(app);
 };
 
-function loadQueues(app: Application) {
+function loadQueues(app) {
   const { logger, config } = app;
   const { baseDir, redis } = config.bull;
 
@@ -25,22 +24,38 @@ function loadQueues(app: Application) {
     },
   });
 
-  // const names = Object.getOwnPropertyNames(app.queue);
-  for (const [_, queue] of Object.entries(app.queue)) {
-    // @ts-ignore
-    // for (const property in queue) {
-    //   if (queue.hasOwnProperty(property)) {
-    //     console.log(property);
-    //   }
-    // }
+  for (const [_, queue] of Object.entries(app.queue as { [key: string]: BaseQueue })) {
+    const autoClean = Reflect.getMetadata('auto_clean', queue.constructor);
+    console.log(autoClean);
     const methods = Object.getOwnPropertyNames(queue.constructor.prototype);
     for (const method of methods) {
       if (method === 'constructor') {
         continue;
       }
-      const name = Reflect.getMetadata('name', queue[method]) || method;
-      const concurrency = Reflect.getMetadata('concurrency', queue[method]) || 1;
-      queue.process(name, concurrency, queue[method]);
+      const type = Reflect.getMetadata('type', queue[method]);
+      switch (type) {
+        case 'processor':
+          const name = Reflect.getMetadata('name', queue[method]) || method;
+          const concurrency = Reflect.getMetadata('concurrency', queue[method]) || 1;
+          queue.process(name, concurrency, queue[method]);
+          break;
+        case 'completed':
+          queue.on('completed', queue[method]);
+          break;
+        case 'global_completed':
+          queue.on('global:completed', queue[method]);
+          break;
+        case 'progress':
+          queue.on('progress', queue[method]);
+          break;
+        case 'global_progress':
+          queue.on('global:progress', queue[method]);
+          break;
+        case 'method':
+        default:
+        // Object.assign(queue, app.createAnonymousContext());
+      }
+
     }
 
     // console.log(name, Reflect.getPrototypeOf(queue)); // Object.keys(queue));

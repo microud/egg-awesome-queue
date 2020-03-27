@@ -57,7 +57,7 @@ exports.bull = {
 
 ### 队列定义
 
-每一个队列定义文件中，需要导出一个继承自 `BaseQueue` 的类。
+每一个队列定义文件中，需要导出一个继承自 `Base` 的类。
 
 类定义中，`this` 对象为 Bull 队列的实例，并且在类构造的时候已经注入了 Egg Application 的实例 `app`，使得在类方法里可以访问 Egg 的资源。
 
@@ -75,15 +75,17 @@ exports.bull = {
 
 标识一个方法为处理 `Queue.on('completed', () => {})` 的回调函数，在整个队列中唯一。
 
+
+
 #### 其他方法
 
 在队列的定义中可以任意定义原型中的 key 以外的方法，可以作为一些可供调用方法的封装，替代部分 service 的方法定义，并在一个队列文件中集中管理。
 
 
 ```ts
-import { BaseQueue, Process, Completed } from "egg-bull";
+import { Base, Process, Completed } from "egg-bull";
 
-export default class FirstQueue extends BaseQueue {
+export default class FirstQueue extends Base {
 
   /**
    * 定义一个设置了 name 和 concurrency 的处理器，在插件启动的时候自动注册
