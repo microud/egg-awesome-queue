@@ -27,16 +27,16 @@ Description here.
 ## Install
 
 ```bash
-$ npm i egg-bull --save
+$ npm i egg-awesome-queue --save
 ```
 
 ## Usage
 
 ```js
 // {app_root}/config/plugin.js
-exports.bull = {
+exports.queue = {
   enable: true,
-  package: 'egg-bull',
+  package: 'egg-awesome-queue',
 };
 ```
 
@@ -44,7 +44,7 @@ exports.bull = {
 
 ```js
 // {app_root}/config/config.default.js
-exports.bull = {
+exports.queue = {
   baseDir: 'queue', // optional, declare the directory to load queue definitions.
   redis: { // optional, redis setting for bull to connect to redis
     host: '127.0.0.1',
@@ -83,7 +83,7 @@ exports.bull = {
 
 
 ```ts
-import { Base, Process, Completed } from "egg-bull";
+import { Base, Process, Completed } from "egg-awesome-queue";
 
 export default class FirstQueue extends Base {
 

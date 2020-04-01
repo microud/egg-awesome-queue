@@ -3,9 +3,23 @@ import { Application, Context } from 'egg';
 import { ProcessPromiseFunction } from 'bull';
 import { JobOptions } from 'bull';
 
-export { BaseQueue } from './index';
+export class BaseQueue extends Bull {
+  app: Application;
+  ctx: Context;
+  handle<T>(handle: ProcessPromiseFunction<T>, name: string, data: any, options?: JobOptions): any;
+}
 
-export { Process, Completed, Method, GlobalCompleted, Progress, GlobalProgress, AutoClean } from './index';
+export function Completed();
+
+export function Method();
+
+export function GlobalCompleted();
+
+export function Progress();
+
+export function GlobalProgress();
+
+export function AutoClean();
 
 export function Process(options?: { name?: string; concurrency?: number });
 

@@ -1,9 +1,9 @@
 {
-  "name": "egg-bull",
-  "version": "1.0.0",
+  "name": "egg-awesome-queue",
+  "version": "0.0.1",
   "description": "Wrapper of bull for egg.",
   "eggPlugin": {
-    "name": "bull"
+    "name": "queue"
   },
   "types": "./index.d.ts",
   "keywords": [
@@ -43,19 +43,22 @@
     "app.js",
     "agent.js",
     "config",
-    "app"
+    "app",
+    "lib/*.js",
+    "index.d.ts",
+    "index.js"
   ],
   "ci": {
     "version": "8, 10"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/eggjs/egg-bull.git"
+    "url": "git+https://github.com/eggjs/egg-awesome-queue.git"
   },
   "bugs": {
     "url": "https://github.com/eggjs/egg/issues"
   },
-  "homepage": "https://github.com/eggjs/egg-bull#readme",
+  "homepage": "https://github.com/eggjs/egg-awesome-queue#readme",
   "author": "microud",
   "license": "MIT"
 }

@@ -23,6 +23,12 @@ export function GlobalProgress() {
   };
 }
 
+export function Failed() {
+  return function(target, propertyKey) {
+    Reflect.defineMetadata('type', 'failed', target[propertyKey]);
+  };
+}
+
 export function Progress() {
   return function(target, propertyKey) {
     Reflect.defineMetadata('type', 'progress', target[propertyKey]);
